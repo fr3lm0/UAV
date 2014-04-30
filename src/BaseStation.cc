@@ -44,10 +44,12 @@ int callback(unsigned char *  _header,
 			packet pk;
 			pk.id = rx_id;
 			transmitted_packets.remove(pk);
+			std::cout << "received ack for " << pk.id << std::endl;
 			received_acks++;
 		}
 		else if(packet_type == 1)
 		{
+			std::cout << "received nack for " << rx_id << std::endl;
 			retransmit_packets.push_back(rx_id);
 			received_nacks++;
 		}
@@ -278,14 +280,14 @@ int main (int argc, char **argv)
 	{
 		std::list<packet>::iterator it;
 		if(timer_toc(print_timer) > .1)
-			printing = true;
+			printing = false;
 		if(printing)std::cout << "packets still waiting for ack: ";
 		for(it = transmitted_packets.begin(); it != transmitted_packets.end(); it++)
 		{
 			if(printing)std::cout << (*it).id << " ";
 			if(timer_toc((*it).send_timer) > packet_timeout)
 			{
-				std::cout << "no response for packet " << (*it).id << std::endl;
+				//std::cout << "no response for packet " << (*it).id << std::endl;
 				timer_tic((*it).send_timer);
 				retransmit_packets.push_back((*it).id);
 				timeouts++;
@@ -314,7 +316,7 @@ int main (int argc, char **argv)
 				for (i=0; i<payload_len; i++)
 					payload[i] = rand() & 0xff;
 
-				std::cout << "retransmitting packet " << id << std::endl;
+				//std::cout << "retransmitting packet " << id << std::endl;
 				txcvr.transmit_packet(header, pk.data, payload_len, ms, fec0, fec1);
 			}
 		}

@@ -75,9 +75,10 @@ int callback(unsigned char *  _header,
 				lock(&acks_to_send_mutex);
 				acks_to_send.push_back(packet_id);
 				unlock(&acks_to_send_mutex);
-				if(verbose)printf("rx packet id: %6u\n", packet_id);
+				if(verbose)printf("rx packet id: %6u", packet_id);
 				num_valid_packets_received++;
 				num_valid_bytes_received += _payload_len;
+				if(verbose)printf(" VALID\n");
 			}
 			else
 			{
@@ -187,7 +188,7 @@ int main (int argc, char **argv)
 			{"outer-fec",			required_argument, 0, 'k'},
 			{"rx-timeout",	        required_argument, 0, 'l'},
             {"help",                no_argument,       0, 'm'},
-            {"verbosity",           required_argument, 0, 'n'},
+            {"verbose",           no_argument, 0, 'n'},
     };
     int option_index = 0;
 	
@@ -313,6 +314,7 @@ int main (int argc, char **argv)
 			header[0] = (acks_to_send.front() >> 8) & 0xff;
 			header[1] = (acks_to_send.front()     ) & 0xff;
 			header[2] = 0;
+			std::cout << "transmitting ack for " << acks_to_send.front() << std::endl;
 			txcvr.transmit_packet(header, payload, 0, LIQUID_MODEM_BPSK, LIQUID_FEC_CONV_V29P23, LIQUID_FEC_RS_M8);
 			acks_to_send.pop_front();
 		}
@@ -324,6 +326,7 @@ int main (int argc, char **argv)
 			header[0] = (nacks_to_send.front() >> 8) & 0xff;
 			header[1] = (nacks_to_send.front()     ) & 0xff;
 			header[2] = 1;
+			std::cout << "transmitting nack for " << nacks_to_send.front() << std::endl;
 			txcvr.transmit_packet(header, payload, 0, LIQUID_MODEM_BPSK, LIQUID_FEC_CONV_V29P23, LIQUID_FEC_RS_M8);
 			nacks_to_send.pop_front();
 		}
