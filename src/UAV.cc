@@ -145,7 +145,7 @@ int main (int argc, char **argv)
 	verbose = false;
 
 	float frequency = 462e6;
-	float bandwidth = 200e3f;
+	float bandwidth = 500e3f;
 	float frequency_separation = 4 * bandwidth;
 	float uhd_rxgain = 20.0;
 	double txgain_dB = -12.0f;          // software tx gain [dB]
