@@ -103,11 +103,11 @@ int main (int argc, char **argv)
 {
     // command-line options
     bool verbose = false;
-    double frequency = 2.495e9;         // carrier frequency
-    double bandwidth = 500e3f;         // bandwidth
+    double frequency = 462e6;         // carrier frequency
+    double bandwidth = 200e3f;         // bandwidth
 	double frequency_separation = 4 * bandwidth;
 	double tx_frequency = frequency;         // carrier frequency
-	double rx_frequency = tx_frequency + frequency_separation;       // carrier frequency
+	double rx_frequency = 464e6;       // carrier frequency
     unsigned int num_frames = 1000;     // number of frames to transmit
     double txgain_dB = -12.0f;          // software tx gain [dB]
     double uhd_txgain = 40.0;           // uhd (hardware) tx gain
@@ -119,7 +119,7 @@ int main (int argc, char **argv)
     unsigned int taper_len = 4;         // taper length
 
     modulation_scheme ms = LIQUID_MODEM_QPSK;// modulation scheme
-    unsigned int payload_len = 1024;        // original data message length
+    unsigned int payload_len = 256;        // original data message length
     //crc_scheme check = LIQUID_CRC_32;       // data validity check
     fec_scheme fec0 = LIQUID_FEC_NONE;      // fec (inner)
     fec_scheme fec1 = LIQUID_FEC_CONV_V29P23; // fec (outer)

@@ -51,7 +51,7 @@ int callback(unsigned char *  _header,
 	{
 		unsigned int packet_id = (_header[0] << 8 | _header[1]);
 		//simulate missing 10% of packets entirely to trigger timeouts on tx side
-		bool missed = rand() % 10 == 3 ? true : false;
+		bool missed = 0; //rand() % 10 == 3 ? true : false;
 		if(missed)
 			std::cout << "missed packet " << packet_id << std::endl;
 		else
@@ -69,7 +69,7 @@ int callback(unsigned char *  _header,
 
 			num_valid_headers_received++;
 			//simulate 10% bad payloads to make sure we send some nacks
-			bool still_valid = rand() % 10 != 3 ? true : false;
+			bool still_valid = 1;//rand() % 10 != 3 ? true : false;
 			if (_payload_valid && still_valid) 
 			{
 				lock(&acks_to_send_mutex);
@@ -144,8 +144,8 @@ int main (int argc, char **argv)
 	// command-line options
 	verbose = false;
 
-	float frequency = 2.495e9;
-	float bandwidth = 500e3f;
+	float frequency = 462e6;
+	float bandwidth = 200e3f;
 	float frequency_separation = 4 * bandwidth;
 	float uhd_rxgain = 20.0;
 	double txgain_dB = -12.0f;          // software tx gain [dB]
@@ -169,7 +169,7 @@ int main (int argc, char **argv)
 
 
     float rx_frequency = frequency;
-    float tx_frequency = rx_frequency + frequency_separation;
+    float tx_frequency = 464e6;
     
      //
     int c;
