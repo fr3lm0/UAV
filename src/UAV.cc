@@ -298,6 +298,11 @@ int main (int argc, char **argv)
 
 	unsigned char header[8];
 	unsigned char payload[payload_len];
+    for(int lcv = 0; lcv < payload_len; lcv++)
+    {
+        payload[lcv] = rand() & 0xff;
+    }
+	
     
 	// run conditions
     int continue_running = 1;
@@ -315,7 +320,7 @@ int main (int argc, char **argv)
 			header[1] = (acks_to_send.front()     ) & 0xff;
 			header[2] = 0;
 			std::cout << "transmitting ack for " << acks_to_send.front() << std::endl;
-			txcvr.transmit_packet(header, payload, 0, LIQUID_MODEM_BPSK, LIQUID_FEC_CONV_V29P23, LIQUID_FEC_RS_M8);
+			txcvr.transmit_packet(header, payload, payload_len, LIQUID_MODEM_BPSK, LIQUID_FEC_CONV_V29P23, LIQUID_FEC_RS_M8);
 			acks_to_send.pop_front();
 		}
 		unlock(&acks_to_send_mutex);
@@ -327,7 +332,7 @@ int main (int argc, char **argv)
 			header[1] = (nacks_to_send.front()     ) & 0xff;
 			header[2] = 1;
 			std::cout << "transmitting nack for " << nacks_to_send.front() << std::endl;
-			txcvr.transmit_packet(header, payload, 0, LIQUID_MODEM_BPSK, LIQUID_FEC_CONV_V29P23, LIQUID_FEC_RS_M8);
+			txcvr.transmit_packet(header, payload, payload_len, LIQUID_MODEM_BPSK, LIQUID_FEC_CONV_V29P23, LIQUID_FEC_RS_M8);
 			nacks_to_send.pop_front();
 		}
 		unlock(&nacks_to_send_mutex);

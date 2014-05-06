@@ -147,7 +147,7 @@ int main (int argc, char **argv)
 			{"outer-fec",			required_argument, 0, 'm'},
 			{"retransmit-timeout",	required_argument, 0, 'n'},
             {"help",                no_argument,       0, 'o'},
-            {"verbosity",           required_argument, 0, 'p'},
+            {"verbose",           no_argument, 0, 'p'},
     };
     int option_index = 0;
 	
