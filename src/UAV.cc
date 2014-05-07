@@ -314,7 +314,7 @@ int main (int argc, char **argv)
 			header[0] = (acks_to_send.front() >> 8) & 0xff;
 			header[1] = (acks_to_send.front()     ) & 0xff;
 			header[2] = 0;
-			std::cout << "transmitting ack for " << acks_to_send.front() << std::endl;
+		//	std::cout << "transmitting ack for " << acks_to_send.front() << std::endl;
 			txcvr.transmit_packet(header, payload, 0, LIQUID_MODEM_BPSK, LIQUID_FEC_CONV_V29P23, LIQUID_FEC_RS_M8);
 			acks_to_send.pop_front();
 		}
@@ -326,7 +326,7 @@ int main (int argc, char **argv)
 			header[0] = (nacks_to_send.front() >> 8) & 0xff;
 			header[1] = (nacks_to_send.front()     ) & 0xff;
 			header[2] = 1;
-			std::cout << "transmitting nack for " << nacks_to_send.front() << std::endl;
+		//	std::cout << "transmitting nack for " << nacks_to_send.front() << std::endl;
 			txcvr.transmit_packet(header, payload, 0, LIQUID_MODEM_BPSK, LIQUID_FEC_CONV_V29P23, LIQUID_FEC_RS_M8);
 			nacks_to_send.pop_front();
 		}
