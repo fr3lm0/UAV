@@ -298,6 +298,11 @@ int main (int argc, char **argv)
 
 	unsigned char header[8];
 	unsigned char payload[payload_len];
+    for(int lcv = 0; lcv < payload_len; lcv++)
+    {
+        payload[lcv] = rand() & 0xff;
+    }
+	
     
 	// run conditions
     int continue_running = 1;
