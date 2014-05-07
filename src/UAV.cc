@@ -147,7 +147,6 @@ int main (int argc, char **argv)
 
 	float frequency = 462e6;
 	float bandwidth = 500e3f;
-	float frequency_separation = 4 * bandwidth;
 	float uhd_rxgain = 20.0;
 	double txgain_dB = -12.0f;          // software tx gain [dB]
 	double uhd_txgain = 40.0;  
@@ -298,7 +297,7 @@ int main (int argc, char **argv)
 
 	unsigned char header[8];
 	unsigned char payload[payload_len];
-    for(int lcv = 0; lcv < payload_len; lcv++)
+    for(unsigned int lcv = 0; lcv < payload_len; lcv++)
     {
         payload[lcv] = rand() & 0xff;
     }
@@ -319,7 +318,7 @@ int main (int argc, char **argv)
 			header[0] = (acks_to_send.front() >> 8) & 0xff;
 			header[1] = (acks_to_send.front()     ) & 0xff;
 			header[2] = 0;
-		//	std::cout << "transmitting ack for " << acks_to_send.front() << std::endl;
+			std::cout << "transmitting ack for " << acks_to_send.front() << std::endl;
 			txcvr.transmit_packet(header, payload, 0, LIQUID_MODEM_BPSK, LIQUID_FEC_CONV_V29P23, LIQUID_FEC_RS_M8);
 			acks_to_send.pop_front();
 		}
@@ -331,7 +330,7 @@ int main (int argc, char **argv)
 			header[0] = (nacks_to_send.front() >> 8) & 0xff;
 			header[1] = (nacks_to_send.front()     ) & 0xff;
 			header[2] = 1;
-		//	std::cout << "transmitting nack for " << nacks_to_send.front() << std::endl;
+			std::cout << "transmitting nack for " << nacks_to_send.front() << std::endl;
 			txcvr.transmit_packet(header, payload, 0, LIQUID_MODEM_BPSK, LIQUID_FEC_CONV_V29P23, LIQUID_FEC_RS_M8);
 			nacks_to_send.pop_front();
 		}

@@ -117,7 +117,6 @@ int main (int argc, char **argv)
     bool verbose = false;
     double frequency = 462e6;         // carrier frequency
     double bandwidth = 500e3f;         // bandwidth
-	double frequency_separation = 4 * bandwidth;
 	double tx_frequency = frequency;         // carrier frequency
 	double rx_frequency = 464e6;       // carrier frequency
     unsigned int num_frames = 1000;     // number of frames to transmit
@@ -137,6 +136,7 @@ int main (int argc, char **argv)
     fec_scheme fec1 = LIQUID_FEC_RS_M8; // fec (outer)
     
 	float packet_timeout = 1.0;
+	float packet_delay = .1;
 
 	
     //
@@ -151,13 +151,14 @@ int main (int argc, char **argv)
 			{"cyclic-prefixi-len",	required_argument, 0, 'g'},
 			{"taper-len",			required_argument, 0, 'h'},
 			{"num-packets",			required_argument, 0, 'i'},
+			{"packet-delay",			required_argument, 0, 'q'},
 			{"payload-len",			required_argument, 0, 'j'},
 			{"mod-scheme",			required_argument, 0, 'k'},
 			{"inner-fec",			required_argument, 0, 'l'},
 			{"outer-fec",			required_argument, 0, 'm'},
 			{"retransmit-timeout",	required_argument, 0, 'n'},
             {"help",                no_argument,       0, 'o'},
-            {"verbose",           no_argument, 0, 'p'},
+            {"verbose",				no_argument, 0, 'p'},
     };
     int option_index = 0;
 	
@@ -234,6 +235,9 @@ int main (int argc, char **argv)
 			case 'p' :
 				verbose = true;
 				break;
+			case 'q':
+				packet_delay = atof(optarg);
+				break;
 				
 		}
 	
@@ -277,8 +281,8 @@ int main (int argc, char **argv)
 	txcvr.start_rx();
     // data arrays
     unsigned char header[8];
-    unsigned char payload[payload_len];
-    
+	unsigned char payload[payload_len];
+
 	timer print_timer = timer_create();
 	timer_tic(print_timer);
 
@@ -286,38 +290,38 @@ int main (int argc, char **argv)
 	timer_tic(tx_timer);
 	bool printing = false;
 	unsigned int id;
-    unsigned int pid = 0;
-    unsigned int i;
+	unsigned int pid = 0;
+	unsigned int i;
 	bool first_away = false;
 	packet pk;
-	float elapsed = 0;
-    while (pid<num_frames || transmitted_packets.size() > 0) 
+	while (pid<num_frames || transmitted_packets.size() > 0) 
 	{
-		std::list<packet>::iterator it;
-		if(timer_toc(print_timer) > .1)
-			printing = false;
-		if(printing)std::cout << "packets still waiting for ack: ";
-		lock(&retransmit_packets_mutex);
-		for(it = transmitted_packets.begin(); it != transmitted_packets.end(); it++)
+		if(timer_toc(tx_timer) > packet_delay)
 		{
-			if(printing)std::cout << (*it).id << " ";
-			if(timer_toc((*it).send_timer) > packet_timeout)
+			timer_tic(tx_timer);
+			std::list<packet>::iterator it;
+			if(timer_toc(print_timer) > .1)
+				printing = false;
+			if(printing)std::cout << "packets still waiting for ack: ";
+			lock(&retransmit_packets_mutex);
+			for(it = transmitted_packets.begin(); it != transmitted_packets.end(); it++)
 			{
-				//std::cout << "no response for packet " << (*it).id << std::endl;
-				timer_tic((*it).send_timer);
-				retransmit_packets.push_back((*it).id);
-				timeouts++;
+				if(printing)std::cout << (*it).id << " ";
+				if(timer_toc((*it).send_timer) > packet_timeout)
+				{
+					//std::cout << "no response for packet " << (*it).id << std::endl;
+					timer_tic((*it).send_timer);
+					retransmit_packets.push_back((*it).id);
+					timeouts++;
+				}
 			}
-		}
-		if(printing)
-		{
-			std::cout << std::endl;
-			timer_tic(print_timer);
-		}
-		printing = false;
-		while(retransmit_packets.size() > 0)
-		{
-			if(timer_toc(tx_timer) > .001)
+			if(printing)
+			{
+				std::cout << std::endl;
+				timer_tic(print_timer);
+			}
+			printing = false;
+			while(retransmit_packets.size() > 0)
 			{
 				id = retransmit_packets.front();
 				retransmit_packets.pop_front();
@@ -334,17 +338,13 @@ int main (int argc, char **argv)
 					for (i=0; i<payload_len; i++)
 						payload[i] = rand() & 0xff;
 
-					//std::cout << "retransmitting packet " << id << std::endl;a
+					std::cout << "retransmitting packet " << id << std::endl;
 					txcvr.transmit_packet(header, pk.data, payload_len, ms, fec0, fec1);
 					timer_tic(tx_timer);
 				}
 			}
-		}
-		unlock(&retransmit_packets_mutex);
-		if(pid < num_frames)
-		{
-			elapsed = timer_toc(tx_timer);
-			if(elapsed > .001 || !first_away)
+			unlock(&retransmit_packets_mutex);
+			if(pid < num_frames)
 			{
 				if (verbose)
 					printf("tx packet id: %6u\n", pid);
@@ -371,8 +371,7 @@ int main (int argc, char **argv)
 				timer_tic(tx_timer);
 				unlock(&transmitted_packets_mutex);
 			}
-		}
-
+		}	
     } // packet loop
  
     // sleep for a small amount of time to allow USRP buffers
