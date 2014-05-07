@@ -124,6 +124,7 @@ int main (int argc, char **argv)
     double txgain_dB = -12.0f;          // software tx gain [dB]
     double uhd_txgain = 40.0;           // uhd (hardware) tx gain
 
+
     // ofdm properties
     unsigned int M = 48;                // number of subcarriers
     unsigned int cp_len = 6;            // cyclic prefix length
