@@ -1,4 +1,4 @@
- #include <math.h>
+#include <math.h>
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -121,62 +121,62 @@ void usage() {
 
 int main (int argc, char **argv)
 {
-    // command-line options
-    bool verbose = false;
-    double frequency = 462e6;         // carrier frequency
-    double bandwidth = 500e3f;         // bandwidth
+	// command-line options
+	bool verbose = false;
+	double frequency = 462e6;         // carrier frequency
+	double bandwidth = 500e3f;         // bandwidth
 	double tx_frequency = frequency;         // carrier frequency
 	double rx_frequency = 464e6;       // carrier frequency
-    unsigned int num_frames = 1000;     // number of frames to transmit
+	unsigned int num_frames = 1000;     // number of frames to transmit
 	float uhd_rxgain = 20.0;
-    double txgain_dB = -12.0f;          // software tx gain [dB]
-    double uhd_txgain = 40.0;           // uhd (hardware) tx gain
+	double txgain_dB = -12.0f;          // software tx gain [dB]
+	double uhd_txgain = 40.0;           // uhd (hardware) tx gain
 
-    // ofdm properties
-    unsigned int M = 48;                // number of subcarriers
-    unsigned int cp_len = 6;            // cyclic prefix length
-    unsigned int taper_len = 4;         // taper length
+	// ofdm properties
+	unsigned int M = 48;                // number of subcarriers
+	unsigned int cp_len = 6;            // cyclic prefix length
+	unsigned int taper_len = 4;         // taper length
 
-    modulation_scheme ms = LIQUID_MODEM_BPSK;// modulation scheme
-    unsigned int payload_len = 256;        // original data message length
-    //crc_scheme check = LIQUID_CRC_32;       // data validity check
-    fec_scheme fec0 = LIQUID_FEC_CONV_V29P23;      // fec (inner)
-    fec_scheme fec1 = LIQUID_FEC_RS_M8; // fec (outer)
-    
+	modulation_scheme ms = LIQUID_MODEM_BPSK;// modulation scheme
+	unsigned int payload_len = 256;        // original data message length
+	//crc_scheme check = LIQUID_CRC_32;       // data validity check
+	fec_scheme fec0 = LIQUID_FEC_CONV_V29P23;      // fec (inner)
+	fec_scheme fec1 = LIQUID_FEC_RS_M8; // fec (outer)
+
 	float packet_timeout = 1.0;
 	float packet_delay = .1;
 
 
-	
-    //
-    int c;
-    static struct option long_options[] = {
-			{"tx-freq",				required_argument, 0, 'a'},
-			{"rx-freq",				required_argument, 0, 'b'},
-			{"tx-sw-gain",			required_argument, 0, 'c'},
-			{"tx-hw-gain",			required_argument, 0, 'd'},
-			{"rx-hw-gain",			required_argument, 0, 'e'},
-			{"num-subcarriers",		required_argument, 0, 'f'},
-			{"cyclic-prefixi-len",	required_argument, 0, 'g'},
-			{"taper-len",			required_argument, 0, 'h'},
-			{"num-packets",			required_argument, 0, 'i'},
-			{"packet-delay",			required_argument, 0, 'q'},
-			{"payload-len",			required_argument, 0, 'j'},
-			{"mod-scheme",			required_argument, 0, 'k'},
-			{"inner-fec",			required_argument, 0, 'l'},
-			{"outer-fec",			required_argument, 0, 'm'},
-			{"retransmit-timeout",	required_argument, 0, 'n'},
-            {"help",                no_argument,       0, 'o'},
-            {"verbose",				no_argument, 0, 'p'},
-    };
-    int option_index = 0;
-	
+
+	//
+	int c;
+	static struct option long_options[] = {
+		{"tx-freq",				required_argument, 0, 'a'},
+		{"rx-freq",				required_argument, 0, 'b'},
+		{"tx-sw-gain",			required_argument, 0, 'c'},
+		{"tx-hw-gain",			required_argument, 0, 'd'},
+		{"rx-hw-gain",			required_argument, 0, 'e'},
+		{"num-subcarriers",		required_argument, 0, 'f'},
+		{"cyclic-prefixi-len",	required_argument, 0, 'g'},
+		{"taper-len",			required_argument, 0, 'h'},
+		{"num-packets",			required_argument, 0, 'i'},
+		{"packet-delay",			required_argument, 0, 'q'},
+		{"payload-len",			required_argument, 0, 'j'},
+		{"mod-scheme",			required_argument, 0, 'k'},
+		{"inner-fec",			required_argument, 0, 'l'},
+		{"outer-fec",			required_argument, 0, 'm'},
+		{"retransmit-timeout",	required_argument, 0, 'n'},
+		{"help",                no_argument,       0, 'o'},
+		{"verbose",				no_argument, 0, 'p'},
+	};
+	int option_index = 0;
+
 	while (1) 
 	{
 		c = getopt_long(argc, argv, "",
 				long_options, &option_index);
 
-		
+
 		if (c == -1)
 			break;
 		switch (c) 
@@ -247,9 +247,9 @@ int main (int argc, char **argv)
 			case 'q':
 				packet_delay = atof(optarg);
 				break;
-				
+
 		}
-	
+
 	}
 
 
@@ -259,37 +259,37 @@ int main (int argc, char **argv)
 
 
 	if (cp_len == 0 || cp_len > M) {
-        fprintf(stderr,"error: %s, cyclic prefix must be in (0,M]\n", argv[0]);
-        exit(1);
-    } else if (ms == LIQUID_MODEM_UNKNOWN) {
-        fprintf(stderr,"error: %s, unknown/unsupported mod. scheme\n", argv[0]);
-        exit(-1);
-    } else if (fec0 == LIQUID_FEC_UNKNOWN) {
-        fprintf(stderr,"error: %s, unknown/unsupported inner fec scheme\n", argv[0]);
-        exit(-1);
-    } else if (fec1 == LIQUID_FEC_UNKNOWN) {
-        fprintf(stderr,"error: %s, unknown/unsupported outer fec scheme\n", argv[0]);
-        exit(-1);
-    }
+		fprintf(stderr,"error: %s, cyclic prefix must be in (0,M]\n", argv[0]);
+		exit(1);
+	} else if (ms == LIQUID_MODEM_UNKNOWN) {
+		fprintf(stderr,"error: %s, unknown/unsupported mod. scheme\n", argv[0]);
+		exit(-1);
+	} else if (fec0 == LIQUID_FEC_UNKNOWN) {
+		fprintf(stderr,"error: %s, unknown/unsupported inner fec scheme\n", argv[0]);
+		exit(-1);
+	} else if (fec1 == LIQUID_FEC_UNKNOWN) {
+		fprintf(stderr,"error: %s, unknown/unsupported outer fec scheme\n", argv[0]);
+		exit(-1);
+	}
 
-    // create transceiver object
-    unsigned char * p = NULL;   // default subcarrier allocation
-    ofdmtxrx txcvr(M, cp_len, taper_len, p, callback, NULL);
+	// create transceiver object
+	unsigned char * p = NULL;   // default subcarrier allocation
+	ofdmtxrx txcvr(M, cp_len, taper_len, p, callback, NULL);
 
-    // set properties
-    txcvr.set_tx_freq(tx_frequency);
-    txcvr.set_tx_rate(bandwidth);
-    txcvr.set_tx_gain_soft(txgain_dB);
-    txcvr.set_tx_gain_uhd(uhd_txgain);
+	// set properties
+	txcvr.set_tx_freq(tx_frequency);
+	txcvr.set_tx_rate(bandwidth);
+	txcvr.set_tx_gain_soft(txgain_dB);
+	txcvr.set_tx_gain_uhd(uhd_txgain);
 
 	txcvr.set_rx_freq(rx_frequency);
 	txcvr.set_rx_rate(bandwidth);
 	txcvr.set_rx_gain_uhd(uhd_rxgain);
-	
+
 
 	txcvr.start_rx();
-    // data arrays
-    unsigned char header[8];
+	// data arrays
+	unsigned char header[8];
 	unsigned char payload[payload_len];
 
 	timer print_timer = timer_create();
@@ -297,7 +297,7 @@ int main (int argc, char **argv)
 
 	timer pid_timer = timer_create();
 
-	
+
 	bool printing = false;
 	unsigned int id;
 	unsigned int i;
@@ -384,23 +384,23 @@ int main (int argc, char **argv)
 				if(!first_away)first_away = true;
 				unlock(&transmitted_packets_mutex);
 			}
-		}	
-    } // packet loop
- 
-    // sleep for a small amount of time to allow USRP buffers
-    // to flush
-	
-    usleep(200000);
+		}
+	} // packet loop
+
+	// sleep for a small amount of time to allow USRP buffers
+	// to flush
+
+	usleep(200000);
 
 	txcvr.stop_rx();
-    //finished
-    printf("usrp data transfer complete\n");
+	//finished
+	printf("usrp data transfer complete\n");
 
 
 	std::cout << "Received " << received_acks << " acks." << std::endl;
 	std::cout << "Received " << received_nacks << " nacks." << std::endl;
 	std::cout << timeouts << " packets timed out and were retransmitted." << std::endl;
-    printf("done.\n");
-    return 0;
+	printf("done.\n");
+	return 0;
 }
 
