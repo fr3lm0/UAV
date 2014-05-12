@@ -12,6 +12,9 @@
 #define lock(s) pthread_mutex_lock(s)
 #define unlock(s) pthread_mutex_unlock(s)
 
+#define READY_TO_TX 1
+#define WAITING_FOR_ACK 2
+
 pthread_mutex_t transmitted_packets_mutex;
 pthread_mutex_t retransmit_packets_mutex;
 
@@ -32,6 +35,8 @@ std::list<unsigned int> retransmit_packets;
 unsigned int received_acks = 0;
 unsigned int received_nacks = 0;
 unsigned int timeouts  = 0;
+unsigned int state = READY_TO_TX;
+unsigned int pid = 0;
 
 int callback(unsigned char *  _header,
 		int              _header_valid,
@@ -53,7 +58,9 @@ int callback(unsigned char *  _header,
 			transmitted_packets.remove(pk);
 			unlock(&transmitted_packets_mutex);
 			std::cout << "received ack for " << pk.id << std::endl;
+			state = READY_TO_TX;
 			received_acks++;
+			pid++;
 		}
 		else if(packet_type == 1)
 		{
@@ -62,6 +69,7 @@ int callback(unsigned char *  _header,
 			retransmit_packets.push_back(rx_id);
 			unlock(&retransmit_packets_mutex);
 			received_nacks++;
+			state = READY_TO_TX;
 		}
 	}
 	return 0;
@@ -137,6 +145,7 @@ int main (int argc, char **argv)
     
 	float packet_timeout = 1.0;
 	float packet_delay = .1;
+
 
 	
     //
@@ -286,19 +295,22 @@ int main (int argc, char **argv)
 	timer print_timer = timer_create();
 	timer_tic(print_timer);
 
-	timer tx_timer = timer_create();
-	timer_tic(tx_timer);
+	timer pid_timer = timer_create();
+
+	
 	bool printing = false;
 	unsigned int id;
-	unsigned int pid = 0;
 	unsigned int i;
 	bool first_away = false;
 	packet pk;
 	while (pid<num_frames || transmitted_packets.size() > 0) 
 	{
-		if(timer_toc(tx_timer) > packet_delay)
+		if(timer_toc(pid_timer) > packet_delay)
 		{
-			timer_tic(tx_timer);
+			state = READY_TO_TX;
+		}
+		if(state == READY_TO_TX)
+		{
 			std::list<packet>::iterator it;
 			if(timer_toc(print_timer) > .1)
 				printing = false;
@@ -340,7 +352,8 @@ int main (int argc, char **argv)
 
 					std::cout << "retransmitting packet " << id << std::endl;
 					txcvr.transmit_packet(header, pk.data, payload_len, ms, fec0, fec1);
-					timer_tic(tx_timer);
+					state = WAITING_FOR_ACK;
+
 				}
 			}
 			unlock(&retransmit_packets_mutex);
@@ -366,9 +379,9 @@ int main (int argc, char **argv)
 				transmitted_packets.push_back(pk);
 				// transmit frame
 				txcvr.transmit_packet(header, payload, payload_len, ms, fec0, fec1);
-				pid++;
+				timer_tic(pid_timer);
+				state = WAITING_FOR_ACK;
 				if(!first_away)first_away = true;
-				timer_tic(tx_timer);
 				unlock(&transmitted_packets_mutex);
 			}
 		}	
