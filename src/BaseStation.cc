@@ -351,7 +351,7 @@ int main (int argc, char **argv)
 					for (i=0; i<payload_len; i++)
 						payload[i] = rand() & 0xff;
 
-					std::cout << "retransmitting packet " << id << std::endl;
+					if(verbose)std::cout << "retransmitting packet " << id << std::endl;
 					txcvr.transmit_packet(header, pk.data, payload_len, ms, fec0, fec1);
 					state = WAITING_FOR_ACK;
 					timer_tic(pid_timer);
