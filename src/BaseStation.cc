@@ -57,14 +57,13 @@ int callback(unsigned char *  _header,
 			lock(&transmitted_packets_mutex);
 			transmitted_packets.remove(pk);
 			unlock(&transmitted_packets_mutex);
-			std::cout << "received ack for " << pk.id << std::endl;
+			//std::cout << "received ack for " << pk.id << std::endl;
 			state = READY_TO_TX;
 			received_acks++;
-			pid++;
 		}
 		else if(packet_type == 1)
 		{
-			std::cout << "received nack for " << rx_id << std::endl;
+			//std::cout << "received nack for " << rx_id << std::endl;
 			lock(&retransmit_packets_mutex);
 			retransmit_packets.push_back(rx_id);
 			unlock(&retransmit_packets_mutex);
@@ -113,6 +112,8 @@ void usage() {
 	printf("								[Default: 1024 bytes]\n");
 	printf("  --retransmit-timeout			Set the time to wait before retransmitting packets\n");
 	printf("								[Default: 1.0 seconds\n");
+	printf("  --response-timeout		Set the time to wait for a response\n");
+	printf("								[Default: 0.2 seconds\n");
 	printf("  --verbose				Enable extra output\n");
 	printf("								[Default: false]\n");
 	printf("  --help				Display this help message\n");
@@ -144,7 +145,7 @@ int main (int argc, char **argv)
 	fec_scheme fec1 = LIQUID_FEC_RS_M8; // fec (outer)
 
 	float packet_timeout = 1.0;
-	float packet_delay = .1;
+	float response_timeout = .2;
 
 
 
@@ -157,10 +158,10 @@ int main (int argc, char **argv)
 		{"tx-hw-gain",			required_argument, 0, 'd'},
 		{"rx-hw-gain",			required_argument, 0, 'e'},
 		{"num-subcarriers",		required_argument, 0, 'f'},
-		{"cyclic-prefixi-len",	required_argument, 0, 'g'},
+		{"cyclic-prefix-len",	required_argument, 0, 'g'},
 		{"taper-len",			required_argument, 0, 'h'},
 		{"num-packets",			required_argument, 0, 'i'},
-		{"packet-delay",			required_argument, 0, 'q'},
+		{"response-timeout",			required_argument, 0, 'q'},
 		{"payload-len",			required_argument, 0, 'j'},
 		{"mod-scheme",			required_argument, 0, 'k'},
 		{"inner-fec",			required_argument, 0, 'l'},
@@ -245,7 +246,7 @@ int main (int argc, char **argv)
 				verbose = true;
 				break;
 			case 'q':
-				packet_delay = atof(optarg);
+				response_timeout = atof(optarg);
 				break;
 
 		}
@@ -305,12 +306,13 @@ int main (int argc, char **argv)
 	packet pk;
 	while (pid<num_frames || transmitted_packets.size() > 0) 
 	{
-		if(timer_toc(pid_timer) > packet_delay)
+		if(timer_toc(pid_timer) > response_timeout)
 		{
 			state = READY_TO_TX;
 		}
 		if(state == READY_TO_TX)
 		{
+			
 			std::list<packet>::iterator it;
 			if(timer_toc(print_timer) > .1)
 				printing = false;
@@ -321,7 +323,6 @@ int main (int argc, char **argv)
 				if(printing)std::cout << (*it).id << " ";
 				if(timer_toc((*it).send_timer) > packet_timeout)
 				{
-					//std::cout << "no response for packet " << (*it).id << std::endl;
 					timer_tic((*it).send_timer);
 					retransmit_packets.push_back((*it).id);
 					timeouts++;
@@ -353,36 +354,41 @@ int main (int argc, char **argv)
 					std::cout << "retransmitting packet " << id << std::endl;
 					txcvr.transmit_packet(header, pk.data, payload_len, ms, fec0, fec1);
 					state = WAITING_FOR_ACK;
+					timer_tic(pid_timer);
 
 				}
 			}
 			unlock(&retransmit_packets_mutex);
-			if(pid < num_frames)
+			if(state == READY_TO_TX)
 			{
-				if (verbose)
-					printf("tx packet id: %6u\n", pid);
+				if(pid < num_frames)
+				{
+					if (verbose)
+						printf("tx packet id: %6u\n", pid);
 
-				// write header (first two bytes packet ID, remaining are random)
-				header[0] = (pid >> 8) & 0xff;
-				header[1] = (pid     ) & 0xff;
-				for (i=2; i<8; i++)
-					header[i] = rand() & 0xff;
+					// write header (first two bytes packet ID, remaining are random)
+					header[0] = (pid >> 8) & 0xff;
+					header[1] = (pid     ) & 0xff;
+					for (i=2; i<8; i++)
+						header[i] = rand() & 0xff;
 
-				// initialize payload
-				for (i=0; i<payload_len; i++)
-					payload[i] = rand() & 0xff;
-				pk.id = pid;
-				memcpy(pk.data, payload, payload_len);
-				pk.send_timer = timer_create();
-				timer_tic(pk.send_timer);
-				lock(&transmitted_packets_mutex);
-				transmitted_packets.push_back(pk);
-				// transmit frame
-				txcvr.transmit_packet(header, payload, payload_len, ms, fec0, fec1);
-				timer_tic(pid_timer);
-				state = WAITING_FOR_ACK;
-				if(!first_away)first_away = true;
-				unlock(&transmitted_packets_mutex);
+					// initialize payload
+					for (i=0; i<payload_len; i++)
+						payload[i] = rand() & 0xff;
+					pk.id = pid;
+					memcpy(pk.data, payload, payload_len);
+					pk.send_timer = timer_create();
+					timer_tic(pk.send_timer);
+					lock(&transmitted_packets_mutex);
+					transmitted_packets.push_back(pk);
+					// transmit frame
+					txcvr.transmit_packet(header, payload, payload_len, ms, fec0, fec1);
+					pid++;
+					timer_tic(pid_timer);
+					state = WAITING_FOR_ACK;
+					if(!first_away)first_away = true;
+					unlock(&transmitted_packets_mutex);
+				}
 			}
 		}
 	} // packet loop
