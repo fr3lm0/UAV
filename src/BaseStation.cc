@@ -57,13 +57,13 @@ int callback(unsigned char *  _header,
 			lock(&transmitted_packets_mutex);
 			transmitted_packets.remove(pk);
 			unlock(&transmitted_packets_mutex);
-			//std::cout << "received ack for " << pk.id << std::endl;
+			std::cout << "ack: " << pk.id << std::endl;
 			state = READY_TO_TX;
 			received_acks++;
 		}
 		else if(packet_type == 1)
 		{
-			//std::cout << "received nack for " << rx_id << std::endl;
+			std::cout << "nack: " << rx_id << std::endl;
 			lock(&retransmit_packets_mutex);
 			retransmit_packets.push_back(rx_id);
 			unlock(&retransmit_packets_mutex);
@@ -111,9 +111,9 @@ void usage() {
 	printf("  --payload-len				Set the size of each packet\n");
 	printf("								[Default: 1024 bytes]\n");
 	printf("  --retransmit-timeout			Set the time to wait before retransmitting packets\n");
-	printf("								[Default: 1.0 seconds\n");
-	printf("  --response-timeout		Set the time to wait for a response\n");
-	printf("								[Default: 0.2 seconds\n");
+	printf("								[Default: 1.0 seconds]\n");
+	printf("  --response-timeout			Set the time to wait for a response\n");
+	printf("								[Default: 0.2 seconds]\n");
 	printf("  --verbose				Enable extra output\n");
 	printf("								[Default: false]\n");
 	printf("  --help				Display this help message\n");
@@ -293,13 +293,10 @@ int main (int argc, char **argv)
 	unsigned char header[8];
 	unsigned char payload[payload_len];
 
-	timer print_timer = timer_create();
-	timer_tic(print_timer);
 
 	timer pid_timer = timer_create();
+	timer_tic(pid_timer);
 
-
-	bool printing = false;
 	unsigned int id;
 	unsigned int i;
 	bool first_away = false;
@@ -314,13 +311,9 @@ int main (int argc, char **argv)
 		{
 			
 			std::list<packet>::iterator it;
-			if(timer_toc(print_timer) > .1)
-				printing = false;
-			if(printing)std::cout << "packets still waiting for ack: ";
 			lock(&retransmit_packets_mutex);
 			for(it = transmitted_packets.begin(); it != transmitted_packets.end(); it++)
 			{
-				if(printing)std::cout << (*it).id << " ";
 				if(timer_toc((*it).send_timer) > packet_timeout)
 				{
 					timer_tic((*it).send_timer);
@@ -328,12 +321,6 @@ int main (int argc, char **argv)
 					timeouts++;
 				}
 			}
-			if(printing)
-			{
-				std::cout << std::endl;
-				timer_tic(print_timer);
-			}
-			printing = false;
 			while(retransmit_packets.size() > 0)
 			{
 				id = retransmit_packets.front();
@@ -351,7 +338,7 @@ int main (int argc, char **argv)
 					for (i=0; i<payload_len; i++)
 						payload[i] = rand() & 0xff;
 
-					if(verbose)std::cout << "retransmitting packet " << id << std::endl;
+					if(verbose)std::cout << "re-tx packet id: " << id << std::endl;
 					txcvr.transmit_packet(header, pk.data, payload_len, ms, fec0, fec1);
 					state = WAITING_FOR_ACK;
 					timer_tic(pid_timer);

@@ -9,7 +9,7 @@
 #include <liquid/liquid.h>
 
 #include <uhd/usrp/multi_usrp.hpp>
- 
+
 #include <liquid/ofdmtxrx.h>
 #include "timer.h"
 
@@ -39,12 +39,12 @@ unsigned int num_valid_bytes_received;
 
 // callback function
 int callback(unsigned char *  _header,
-             int              _header_valid,
-             unsigned char *  _payload,
-             unsigned int     _payload_len,
-             int              _payload_valid,
-             framesyncstats_s _stats,
-			 void *           _userdata)
+		int              _header_valid,
+		unsigned char *  _payload,
+		unsigned int     _payload_len,
+		int              _payload_valid,
+		framesyncstats_s _stats,
+		void *           _userdata)
 {
 
 	if (_header_valid) 
@@ -97,7 +97,7 @@ int callback(unsigned char *  _header,
 	// update global counters
 	num_frames_detected++;
 
-    return 0;
+	return 0;
 }
 
 void usage() {
@@ -151,12 +151,12 @@ int main (int argc, char **argv)
 	double txgain_dB = -12.0f;          // software tx gain [dB]
 	double uhd_txgain = 40.0;  
 
-    // ofdm properties
-    unsigned int M = 48;                // number of subcarriers
-    unsigned int cp_len = 6;            // cyclic prefix length
-    unsigned int taper_len = 4;         // taper length
+	// ofdm properties
+	unsigned int M = 48;                // number of subcarriers
+	unsigned int cp_len = 6;            // cyclic prefix length
+	unsigned int taper_len = 4;         // taper length
 
-    int debug_enabled =  0;             // enable debugging?
+	int debug_enabled =  0;             // enable debugging?
 
 	modulation_scheme ms = LIQUID_MODEM_QPSK;// modulation scheme
 	unsigned int payload_len = 256;        // original data message length
@@ -168,35 +168,35 @@ int main (int argc, char **argv)
 	packet_arrival_timer = timer_create();
 
 
-    float rx_frequency = frequency;
-    float tx_frequency = 464e6;
-    
-     //
-    int c;
-    static struct option long_options[] = {
-			{"tx-freq",				required_argument, 0, 'a'},
-			{"rx-freq",				required_argument, 0, 'b'},
-			{"tx-sw-gain",			required_argument, 0, 'c'},
-			{"tx-hw-gain",			required_argument, 0, 'd'},
-			{"rx-hw-gain",			required_argument, 0, 'e'},
-			{"num-subcarriers",		required_argument, 0, 'f'},
-			{"cyclic-prefixi-len",	required_argument, 0, 'g'},
-			{"taper-len",			required_argument, 0, 'h'},
-    		{"mod-scheme",			required_argument, 0, 'i'},
-			{"inner-fec",			required_argument, 0, 'j'},
-			{"outer-fec",			required_argument, 0, 'k'},
-			{"rx-timeout",	        required_argument, 0, 'l'},
-            {"help",                no_argument,       0, 'm'},
-            {"verbose",           no_argument, 0, 'n'},
-    };
-    int option_index = 0;
-	
+	float rx_frequency = frequency;
+	float tx_frequency = 464e6;
+
+	//
+	int c;
+	static struct option long_options[] = {
+		{"tx-freq",				required_argument, 0, 'a'},
+		{"rx-freq",				required_argument, 0, 'b'},
+		{"tx-sw-gain",			required_argument, 0, 'c'},
+		{"tx-hw-gain",			required_argument, 0, 'd'},
+		{"rx-hw-gain",			required_argument, 0, 'e'},
+		{"num-subcarriers",		required_argument, 0, 'f'},
+		{"cyclic-prefixi-len",	required_argument, 0, 'g'},
+		{"taper-len",			required_argument, 0, 'h'},
+		{"mod-scheme",			required_argument, 0, 'i'},
+		{"inner-fec",			required_argument, 0, 'j'},
+		{"outer-fec",			required_argument, 0, 'k'},
+		{"rx-timeout",	        required_argument, 0, 'l'},
+		{"help",                no_argument,       0, 'm'},
+		{"verbose",           no_argument, 0, 'n'},
+	};
+	int option_index = 0;
+
 	while (1) 
 	{
 		c = getopt_long(argc, argv, "",
 				long_options, &option_index);
 
-		
+
 		if (c == -1)
 			break;
 		switch (c) 
@@ -258,60 +258,60 @@ int main (int argc, char **argv)
 			case 'n' :
 				verbose = true;
 				break;
-				
+
 		}
-	
+
 	}
 
 	std::cout << "tx freq: " << tx_frequency << std::endl;
 	std::cout << "rx freq: " << rx_frequency << std::endl;
-    
+
 	if (cp_len == 0 || cp_len > M) {
-        fprintf(stderr,"error: %s, cyclic prefix must be in (0,M]\n", argv[0]);
-        exit(1);
-    }
+		fprintf(stderr,"error: %s, cyclic prefix must be in (0,M]\n", argv[0]);
+		exit(1);
+	}
 
-    // create transceiver object
-    unsigned char * p = NULL;   // default subcarrier allocation
-    ofdmtxrx txcvr(M, cp_len, taper_len, p, callback,(void*)&txcvr);
+	// create transceiver object
+	unsigned char * p = NULL;   // default subcarrier allocation
+	ofdmtxrx txcvr(M, cp_len, taper_len, p, callback,(void*)&txcvr);
 
-    // set properties
-    txcvr.set_rx_freq(rx_frequency);
-    txcvr.set_rx_rate(bandwidth);
-    txcvr.set_rx_gain_uhd(uhd_rxgain);
+	// set properties
+	txcvr.set_rx_freq(rx_frequency);
+	txcvr.set_rx_rate(bandwidth);
+	txcvr.set_rx_gain_uhd(uhd_rxgain);
 
 	txcvr.set_tx_freq(tx_frequency);
 	txcvr.set_tx_rate(bandwidth);
 	txcvr.set_tx_gain_soft(txgain_dB);
 	txcvr.set_tx_gain_uhd(uhd_txgain);
 
-    // enable debugging on request
-    if (debug_enabled)
-        txcvr.debug_enable();
+	// enable debugging on request
+	if (debug_enabled)
+		txcvr.debug_enable();
 
-    // reset counters
-    num_frames_detected=0;
-    num_valid_headers_received=0;
-    num_valid_packets_received=0;
-    num_valid_bytes_received=0;
+	// reset counters
+	num_frames_detected=0;
+	num_valid_headers_received=0;
+	num_valid_packets_received=0;
+	num_valid_bytes_received=0;
 
 	unsigned char header[8];
 	unsigned char payload[payload_len];
-    for(unsigned int lcv = 0; lcv < payload_len; lcv++)
-    {
-        payload[lcv] = rand() & 0xff;
-    }
-	
-    
+	for(unsigned int lcv = 0; lcv < payload_len; lcv++)
+	{
+		payload[lcv] = rand() & 0xff;
+	}
+
+
 	// run conditions
-    int continue_running = 1;
-    timer t0 = timer_create();
-    timer_tic(t0);
+	int continue_running = 1;
+	timer t0 = timer_create();
+	timer_tic(t0);
 
-    // start receiver
-    txcvr.start_rx();
-
-    while (continue_running) {
+	// start receiver
+	txcvr.start_rx();
+	std::cout << "UAV awaiting data from Basestation." << std::endl;
+	while (continue_running) {
 		lock(&acks_to_send_mutex);
 		while(acks_to_send.size() > 0)
 		{
@@ -323,7 +323,7 @@ int main (int argc, char **argv)
 			acks_to_send.pop_front();
 		}
 		unlock(&acks_to_send_mutex);
-   
+
 		lock(&nacks_to_send_mutex);
 		while(nacks_to_send.size() > 0)
 		{
@@ -336,40 +336,40 @@ int main (int argc, char **argv)
 		}
 		unlock(&nacks_to_send_mutex);
 		// sleep for 100 ms and check state
-        usleep(100000);
+		usleep(100000);
 		if(first_packet_arrived && timer_toc(packet_arrival_timer) > rx_timeout)
 		{
 			std::cout << "no packets received for " << rx_timeout << " seconds, quitting." << std::endl;
 			continue_running = 0;
 		}
-    }
+	}
 
-    // stop receiver
-    printf("ofdmflexframe_rx stopping receiver...\n");
-    txcvr.stop_rx();
- 
-    // compute actual run-time
-    //float runtime = timer_toc(t0);
+	// stop receiver
+	printf("ofdmflexframe_rx stopping receiver...\n");
+	txcvr.stop_rx();
+
+	// compute actual run-time
+	//float runtime = timer_toc(t0);
 	//compute runtime = time of last packet arrival - time of first packet arrival
 	float runtime = total_elapsed_time;
-    // print results
-    float data_rate = num_valid_bytes_received * 8.0f / runtime;
-    float percent_headers_valid = (num_frames_detected == 0) ?
-                          0.0f :
-                          100.0f * (float)num_valid_headers_received / (float)num_frames_detected;
-    float percent_packets_valid = (num_frames_detected == 0) ?
-                          0.0f :
-                          100.0f * (float)num_valid_packets_received / (float)num_frames_detected;
-    printf("    frames detected     : %6u\n", num_frames_detected);
-    printf("    valid headers       : %6u (%6.2f%%)\n", num_valid_headers_received,percent_headers_valid);
-    printf("    valid packets       : %6u (%6.2f%%)\n", num_valid_packets_received,percent_packets_valid);
-    printf("    bytes received      : %6u\n", num_valid_bytes_received);
-    printf("    run time            : %f s\n", runtime);
-    printf("    data rate           : %8.4f kbps\n", data_rate*1e-3f);
+	// print results
+	float data_rate = num_valid_bytes_received * 8.0f / runtime;
+	float percent_headers_valid = (num_frames_detected == 0) ?
+		0.0f :
+		100.0f * (float)num_valid_headers_received / (float)num_frames_detected;
+	float percent_packets_valid = (num_frames_detected == 0) ?
+		0.0f :
+		100.0f * (float)num_valid_packets_received / (float)num_frames_detected;
+	printf("    frames detected     : %6u\n", num_frames_detected);
+	printf("    valid headers       : %6u (%6.2f%%)\n", num_valid_headers_received,percent_headers_valid);
+	printf("    valid packets       : %6u (%6.2f%%)\n", num_valid_packets_received,percent_packets_valid);
+	printf("    bytes received      : %6u\n", num_valid_bytes_received);
+	printf("    run time            : %f s\n", runtime);
+	printf("    data rate           : %8.4f kbps\n", data_rate*1e-3f);
 
-    // destroy objects
-    timer_destroy(t0);
+	// destroy objects
+	timer_destroy(t0);
 
-    return 0;
+	return 0;
 }
 
