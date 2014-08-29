@@ -1,10 +1,13 @@
 #include <math.h>
 #include <iostream>
+#include <fstream>
+#include <ctime>
 #include <stdio.h>
 #include <stdlib.h>
 #include <complex>
 #include <getopt.h>
 #include <liquid/liquid.h>
+#include <sys/time.h>
 
 #include <liquid/ofdmtxrx.h>
 #include "timer.h"
@@ -15,12 +18,34 @@
 #define READY_TO_TX 1
 #define WAITING_FOR_ACK 2
 
+
 pthread_mutex_t transmitted_packets_mutex;
 pthread_mutex_t retransmit_packets_mutex;
+
+timer program_timer = timer_create();
+std::string log_string = "";
+time_t tn;
+struct tm *now;
+struct timeval tv;
+
+void log(std::string msg)
+{
+	//float f = timer_toc(program_timer);
+	gettimeofday(&tv, NULL);
+	float s = tv.tv_sec;
+	s = s - 1e7;
+	float us = tv.tv_usec;
+	float ts = (s + us*1e-6f);
+	std::ostringstream os;
+	os.precision(20);
+	os << ts << ":" << msg << std::endl;
+	log_string += os.str();
+}	
 
 struct packet
 {
 	unsigned int id;
+	unsigned int tx_attempts;
 	unsigned char data[1024];
 	timer send_timer;
 	bool operator ==(const packet &rhs)
@@ -57,13 +82,11 @@ int callback(unsigned char *  _header,
 			lock(&transmitted_packets_mutex);
 			transmitted_packets.remove(pk);
 			unlock(&transmitted_packets_mutex);
-			std::cout << "ack: " << pk.id << std::endl;
 			state = READY_TO_TX;
 			received_acks++;
 		}
 		else if(packet_type == 1)
 		{
-			std::cout << "nack: " << rx_id << std::endl;
 			lock(&retransmit_packets_mutex);
 			retransmit_packets.push_back(rx_id);
 			unlock(&retransmit_packets_mutex);
@@ -122,6 +145,8 @@ void usage() {
 
 int main (int argc, char **argv)
 {
+	timer_tic(program_timer);
+	log("base station started");
 	// command-line options
 	bool verbose = false;
 	double frequency = 462e6;         // carrier frequency
@@ -139,9 +164,9 @@ int main (int argc, char **argv)
 	unsigned int taper_len = 4;         // taper length
 
 	modulation_scheme ms = LIQUID_MODEM_BPSK;// modulation scheme
-	unsigned int payload_len = 256;        // original data message length
-	//crc_scheme check = LIQUID_CRC_32;       // data validity check
-	fec_scheme fec0 = LIQUID_FEC_CONV_V29P23;      // fec (inner)
+	unsigned int payload_len = 4096;        // original data message length
+//	fec_scheme fec0 = LIQUID_FEC_CONV_V29P23;      // fec (inner)
+	fec_scheme fec0 = LIQUID_FEC_NONE;      // fec (inner)
 	fec_scheme fec1 = LIQUID_FEC_RS_M8; // fec (outer)
 
 	float packet_timeout = 1.0;
@@ -301,6 +326,8 @@ int main (int argc, char **argv)
 	unsigned int i;
 	bool first_away = false;
 	packet pk;
+	packet pk2;
+	std::ostringstream msg;
 	while (pid<num_frames || transmitted_packets.size() > 0) 
 	{
 		if(timer_toc(pid_timer) > response_timeout)
@@ -325,21 +352,27 @@ int main (int argc, char **argv)
 			{
 				id = retransmit_packets.front();
 				retransmit_packets.pop_front();
-				pk.id = id;
-				std::list<packet>::iterator iter = std::find(transmitted_packets.begin(), transmitted_packets.end(), pk);
+				pk2.id = id;
+				std::list<packet>::iterator iter = std::find(transmitted_packets.begin(), transmitted_packets.end(), pk2);
 				if(iter != transmitted_packets.end())
 				{
-					pk = (*iter);
+					
+					(*iter).tx_attempts++;
 					header[0] = (id >> 8) & 0xff;
 					header[1] = (id     ) & 0xff;
-					for (i=2; i<8; i++)
+					header[2] = (*iter).tx_attempts;
+					for (i=3; i<8; i++)
 						header[i] = rand() & 0xff;
 
 					for (i=0; i<payload_len; i++)
 						payload[i] = rand() & 0xff;
 
 					if(verbose)std::cout << "re-tx packet id: " << id << std::endl;
-					txcvr.transmit_packet(header, pk.data, payload_len, ms, fec0, fec1);
+					txcvr.transmit_packet(header, (*iter).data, payload_len, ms, fec0, fec1);
+					msg.str("");
+					msg.clear();
+					msg << "tx id: " << (*iter).id << ", attempt: " << (*iter).tx_attempts;
+					log(msg.str());
 					state = WAITING_FOR_ACK;
 					timer_tic(pid_timer);
 
@@ -356,13 +389,15 @@ int main (int argc, char **argv)
 					// write header (first two bytes packet ID, remaining are random)
 					header[0] = (pid >> 8) & 0xff;
 					header[1] = (pid     ) & 0xff;
-					for (i=2; i<8; i++)
+					header[2] = 1;
+					for (i=3; i<8; i++)
 						header[i] = rand() & 0xff;
 
 					// initialize payload
 					for (i=0; i<payload_len; i++)
 						payload[i] = rand() & 0xff;
 					pk.id = pid;
+					pk.tx_attempts = 1;
 					memcpy(pk.data, payload, payload_len);
 					pk.send_timer = timer_create();
 					timer_tic(pk.send_timer);
@@ -370,6 +405,10 @@ int main (int argc, char **argv)
 					transmitted_packets.push_back(pk);
 					// transmit frame
 					txcvr.transmit_packet(header, payload, payload_len, ms, fec0, fec1);
+					msg.str("");
+					msg.clear();
+					msg << "tx id: " << pk.id << ", attempt: " << pk.tx_attempts;
+					log(msg.str());
 					pid++;
 					timer_tic(pid_timer);
 					state = WAITING_FOR_ACK;
@@ -394,6 +433,16 @@ int main (int argc, char **argv)
 	std::cout << "Received " << received_nacks << " nacks." << std::endl;
 	std::cout << timeouts << " packets timed out and were retransmitted." << std::endl;
 	printf("done.\n");
+	log("Base station done");
+	std::ostringstream filename;
+	time_t t = time(0);
+	struct tm * now = localtime(&t);
+	filename << "bs-" << now->tm_mon + 1 << ":" << now->tm_mday << ":" << now->tm_hour << ":" << now->tm_min << ".log";
+	std::ofstream log_file;
+	log_file.open(filename.str().c_str());
+	log_file << log_string << std::endl;
+	log_file.close();
+	timer_destroy(program_timer);
 	return 0;
 }
 

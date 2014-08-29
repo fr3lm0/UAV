@@ -1,6 +1,8 @@
 
 #include <iostream>
 #include <complex>
+#include <ctime>
+#include <fstream>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,6 +25,17 @@ std::list<unsigned int> nacks_to_send;
 
 pthread_mutex_t acks_to_send_mutex;
 pthread_mutex_t nacks_to_send_mutex;
+
+timer program_timer = timer_create();
+std::string log_string="";
+
+void log(std::string msg)
+{
+	float f = timer_toc(program_timer);
+	std::ostringstream os;
+	os << f << ": " << msg << std::endl;
+	log_string += os.str();
+}
 
 unsigned char fb_header[8];
 unsigned char fb_payload[1];
@@ -50,6 +63,7 @@ int callback(unsigned char *  _header,
 	if (_header_valid) 
 	{
 		unsigned int packet_id = (_header[0] << 8 | _header[1]);
+		unsigned int attempt_num = _header[2];
 		//simulate missing 10% of packets entirely to trigger timeouts on tx side
 		bool missed = 0; //rand() % 10 == 3 ? true : false;
 		if(missed)
@@ -75,7 +89,10 @@ int callback(unsigned char *  _header,
 				lock(&acks_to_send_mutex);
 				acks_to_send.push_back(packet_id);
 				unlock(&acks_to_send_mutex);
-				if(verbose)printf("rx packet id: %6u", packet_id);
+				if(verbose)printf("rx packet id: %6u, attempt: %u", packet_id, attempt_num);
+				std::ostringstream msg;
+				msg << "rx id: " << packet_id << ", attempt: " << attempt_num;
+				log(msg.str());
 				num_valid_packets_received++;
 				num_valid_bytes_received += _payload_len;
 				if(verbose)printf(" VALID\n");
@@ -142,6 +159,7 @@ void usage() {
 
 int main (int argc, char **argv)
 {
+	timer_tic(program_timer);
 	// command-line options
 	verbose = false;
 
@@ -159,9 +177,9 @@ int main (int argc, char **argv)
 	int debug_enabled =  0;             // enable debugging?
 
 	modulation_scheme ms = LIQUID_MODEM_QPSK;// modulation scheme
-	unsigned int payload_len = 256;        // original data message length
-	fec_scheme fec0 = LIQUID_FEC_NONE;      // fec (inner)
-	fec_scheme fec1 = LIQUID_FEC_CONV_V29P23; // fec (outer)
+	unsigned int payload_len = 1024;        // original data message length
+	fec_scheme fec0 = LIQUID_FEC_CONV_V29P23; // fec (outer)
+	fec_scheme fec1 = LIQUID_FEC_RS_M8;      // fec (inner)
 	rx_timer = timer_create();
 
 	float rx_timeout = 3.0;
@@ -319,7 +337,7 @@ int main (int argc, char **argv)
 			header[1] = (acks_to_send.front()     ) & 0xff;
 			header[2] = 0;
 			//std::cout << "transmitting ack for " << acks_to_send.front() << std::endl;
-			txcvr.transmit_packet(header, payload, 0, LIQUID_MODEM_BPSK, LIQUID_FEC_CONV_V29P23, LIQUID_FEC_RS_M8);
+			txcvr.transmit_packet(header, payload, payload_len, LIQUID_MODEM_BPSK, LIQUID_FEC_CONV_V29P23, LIQUID_FEC_RS_M8);
 			acks_to_send.pop_front();
 		}
 		unlock(&acks_to_send_mutex);
@@ -331,7 +349,7 @@ int main (int argc, char **argv)
 			header[1] = (nacks_to_send.front()     ) & 0xff;
 			header[2] = 1;
 			//std::cout << "transmitting nack for " << nacks_to_send.front() << std::endl;
-			txcvr.transmit_packet(header, payload, 0, LIQUID_MODEM_BPSK, LIQUID_FEC_CONV_V29P23, LIQUID_FEC_RS_M8);
+			txcvr.transmit_packet(header, payload, payload_len, LIQUID_MODEM_BPSK, LIQUID_FEC_CONV_V29P23, LIQUID_FEC_RS_M8);
 			nacks_to_send.pop_front();
 		}
 		unlock(&nacks_to_send_mutex);
@@ -367,9 +385,18 @@ int main (int argc, char **argv)
 	printf("    run time            : %f s\n", runtime);
 	printf("    data rate           : %8.4f kbps\n", data_rate*1e-3f);
 
+	std::ostringstream filename;
+	time_t t = time(0);
+	struct tm * now = localtime(&t);
+	filename << "uav-" << now->tm_mon + 1 << ":" << now->tm_mday << ":" << now->tm_hour << ":" << now->tm_min << ".log";
+	std::ofstream log_file;
+	log_file.open(filename.str().c_str());
+	log_file << log_string << std::endl;
+	log_file.close();
+	
 	// destroy objects
 	timer_destroy(t0);
-
+	timer_destroy(program_timer);
 	return 0;
 }
 
